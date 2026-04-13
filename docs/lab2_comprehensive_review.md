@@ -1,5 +1,8 @@
 # Lab 2 — Comprehensive Repository Review
 
+> [!NOTE]
+> This Lab 3 repository keeps selected Lab 2 reference material locally. The preserved Lab 2 run artifacts live under `historical/lab2/last_run/`, while the broader older Lab 2 layout described below reflects the original project history rather than the current top-level structure of this repo.
+
 ## 1. Project Overview
 
 This repository documents the iterative development of a **same-resolution image super-resolution (SR) / restoration model** for Lab 2 of DATA 255 (Spring 2026). The task is to take a degraded low-resolution (LR) 256×256 image and produce a restored high-resolution (HR) 256×256 output — a restoration problem rather than spatial upscaling.
@@ -23,7 +26,7 @@ Lab-2/
 ├── Lab 2 Phase 5/           # Shared common module (phase5_common.py), Colab/A100/TPU training
 ├── Lab 2 Phase 6/           # Architecture screening matrix (6 candidates) + postmortem
 ├── Lab 2 Phase 7/           # Calibrated NPU SR — no-norm residual models + Modal outputs
-├── Lab 2 last run/          # Final training run (mixed_kernel_residual) + checkpoints
+├── historical/lab2/last_run/ # Preserved final training run (mixed_kernel_residual) + checkpoints
 ├── Submission/              # ONNX → MXQ final model + conversion script + notebook
 ├── CanvasSubmissionApril8/  # Cleaned notebook + MXQ submitted to Canvas
 ├── ONNX-toMXQ/              # ONNX-to-MXQ conversion tooling + calibration dataset

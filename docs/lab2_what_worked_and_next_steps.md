@@ -1,5 +1,8 @@
 # Lab 2 — What Worked, What Didn't, and Next Steps
 
+> [!NOTE]
+> This Lab 3 repository keeps selected Lab 2 reference material locally. Preserved Lab 2 run artifacts now live under `historical/lab2/last_run/`; some older path names mentioned in this writeup refer to the original Lab 2 workspace layout.
+
 > Post-mortem analysis synthesized from 8 development phases, 20+ architectures,
 > 5 compute platforms, and the April 8 Canvas submission.
 
@@ -415,7 +418,7 @@ difficulty:
 | Final notebook | `CanvasSubmissionApril8/lab2_final_model_cleaned_no_calibration.ipynb` | Submitted April 8 |
 | MXQ model | `CanvasSubmissionApril8/lab2.mxq` (~5.5 MB) | Submitted April 8 |
 | ONNX converter | `CanvasSubmissionApril8/lab_step2_onnx-to-mxq.py` | Submitted April 8 |
-| Training run | `Lab 2 last run/phase7b_.../20260408_005528/` | 56.5 min on Modal |
-| Best checkpoint | `Lab 2 last run/best.pt` | mixed_kernel_residual, 2.39M params |
-| ONNX export | `Lab 2 last run/.../exports/best.onnx` (~9.3 MB) | ORT parity 6e-8 |
+| Training run | `historical/lab2/last_run/phase7b_.../20260408_005528/` | 56.5 min on Modal |
+| Best checkpoint | `historical/lab2/last_run/best.pt` | mixed_kernel_residual, 2.39M params |
+| ONNX export | `historical/lab2/last_run/.../exports/best.onnx` (~9.3 MB) | ORT parity 6e-8 |
 | Post-submission runs | `leaky_relu_last_run_20260410_*` (on Modal volume) | April 10, 2 days after submission |
