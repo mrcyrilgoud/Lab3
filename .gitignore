@@ -1,0 +1,11 @@
+@Data/
+Data/
+
+# Lab 2 last run — calibration image exports (under each run's exports/)
+/Lab 2 last run/**/exports/calibration/
+
+# Run artifacts, scratch, Python cache (anywhere in the repo)
+runs/
+tmp/
+__pycache__/
+tools/__pycache__/
