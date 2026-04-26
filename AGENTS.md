@@ -17,6 +17,8 @@ This includes:
 - calibration-data preparation
 - ONNX-to-MXQ conversion work
 - final submission artifact packaging
+- autonomous experimentation scaffolding
+- autonomous experiment reviews or reruns
 
 ## Expected Behavior
 
@@ -28,6 +30,24 @@ When working on Lab 3 tasks:
 - keep calibration data derived from training data
 - ensure deliverables stay aligned with the `.pth`, `.onnx`, conversion-script, and `.mxq` submission chain
 - prefer notebook designs and model choices that are compatible with the NPU deployment path described in the rubric
+
+## Lab 3 Autopilot Rules
+
+For any autonomous experimentation or Codex automation work in this repo:
+
+- read the rubric before making experiment decisions
+- treat [lab3_wide_residual_nobn_modal_app.ipynb](/Users/mrcyrilgoud/Desktop/repos/Lab3/lab3_wide_residual_nobn_modal_app.ipynb) as the canonical Modal pipeline entrypoint
+- validate the canonical pipeline before running autonomous experiments
+- run all training, validation, export, and calibration work on Modal only
+- do not run local training
+- preserve the required `256x256x3` input/output contract
+- keep calibration derived from training data
+- use the `lab3-data` Modal volume for dataset access
+- sync day-partitioned Modal run outputs back into this repo
+- write autopilot reports under [runs/autopilot_reports](/Users/mrcyrilgoud/Desktop/repos/Lab3/runs/autopilot_reports)
+- do not rerun identical configs unless a rerun reason is explicitly recorded
+- prefer same-slice and same-budget comparisons for ranking decisions
+- do not commit, push, or open pull requests as part of autonomous experimentation
 
 ## Priority
 

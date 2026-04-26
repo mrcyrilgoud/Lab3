@@ -1,0 +1,36 @@
+# Restormer teacher — set active_profile to smoke or large
+active_profile: large
+
+profiles:
+  smoke:
+    dim: 32
+    num_blocks: [2, 2, 4, 2]
+    num_refinement_blocks: 2
+    heads: [1, 2, 4, 8]
+    ffn_expansion_factor: 2.66
+  large:
+    dim: 48
+    num_blocks: [4, 6, 6, 8]
+    num_refinement_blocks: 4
+    heads: [1, 2, 4, 8]
+    ffn_expansion_factor: 2.66
+
+training:
+  data_root: Data
+  artifact_root: runs
+  run_name: restormer_teacher_large
+  started_day: ""  # default: UTC date YYYY-MM-DD
+  epochs: 100
+  batch_size: auto  # or integer; auto: 4 if <=16GiB VRAM else 8
+  lr: 2.0e-4
+  min_lr: 1.0e-6
+  weight_decay: 1.0e-4
+  warmup_epochs: 3
+  patch_size: 192
+  ema_decay: 0.999
+  grad_clip: 1.0
+  seed: 42
+  train_num_workers: 4
+  val_num_workers: 2
+  log_step_interval: 0  # 0 = disabled; e.g. 100 for periodic train_step lines
+  smoke_test_override: false

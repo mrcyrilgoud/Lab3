@@ -1,0 +1,21 @@
+active_profile: smoke
+
+profiles:
+  smoke:
+    dim: 32
+    num_blocks: [2, 2, 4, 2]
+    num_refinement_blocks: 2
+    heads: [1, 2, 4, 8]
+    ffn_expansion_factor: 2.66
+  large:
+    dim: 48
+    num_blocks: [4, 6, 6, 8]
+    num_refinement_blocks: 4
+    heads: [1, 2, 4, 8]
+    ffn_expansion_factor: 2.66
+
+artifacts:
+  export_slug: restormer_npu_v1
+  onnx_name: restormer_npu_v1.onnx
+  mxq_name: restormer_npu_v1.mxq
+  run_name_prefix: restormer_npu_v1
