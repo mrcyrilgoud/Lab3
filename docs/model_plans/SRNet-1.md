@@ -1,0 +1,129 @@
+# SRNet MLA-Strict Pre-Dec2 Bottleneck Plan
+
+## Summary
+- Patch [lab3_srnet_npu_v1_modal.ipynb](/Users/mrcyrilgoud/Desktop/repos/Lab3/experiments/SRNet%20NPU%20v1/lab3_srnet_npu_v1_modal.ipynb) in place.
+- Keep the current Lab 3 detached Modal workflow, L3 dataset routing, concise notebook structure, `256x256x3 -> 256x256x3` contract, and `.pth -> .onnx -> calibration -> conversion script -> .mxq` chain.
+- Replace the current add-based SRNet with a **strict MLA-safe student** that moves more late refinement work off the `256x256` path by adding a **pre-dec2 bottleneck**.
+- Improve PSNR with training-only changes that do not affect the exported graph:
+  - residual-space distillation from a stronger local teacher
+  - partial warm start from the current best SRNet checkpoint
+  - a modestly longer run budget
+
+## Implementation Changes
+- Replace the current model with `SRNetMLAStrictPreDec2Bottleneck`.
+- Lock the forward graph to MLA-safe ops only:
+  - `Conv2d`
+  - `ConvTranspose2d`
+  - `LeakyReLU`
+- Remove all inference-time `Add`:
+  - no global residual `x + delta`
+  - no skip-add fusion
+  - no block residual adds
+  - no `Concat`, `Resize`, `Mul`, `Sub`, `Clip`, `Sigmoid`, `Softmax`, or `Transpose`
+- Fixed model shape:
+  - stem: `Conv3x3 3->32 + LeakyReLU`
+  - enc1: `3 x ResidualCleanBlock(32, k=3)` at `256x256`
+  - down1: `Conv3x3 stride2 32->64 + LeakyReLU`
+  - enc2: `3 x ResidualCleanBlock(64, k=5)` at `128x128`
+  - down2: `Conv3x3 stride2 64->128 + LeakyReLU`
+  - bottleneck: `5 x ResidualCleanBlock(128, pattern 3,5,3,5,3)` at `64x64`
+  - up1: `ConvTranspose2d 128->64 stride2 + LeakyReLU`
+  - dec1: `3 x ResidualCleanBlock(64, k=5)` at `128x128`
+  - up2: `ConvTranspose2d 64->32 stride2 + LeakyReLU`
+  - **pre-dec2 bottleneck**:
+    - `Conv3x3 stride2 32->48 + LeakyReLU` down to `128x128`
+    - `3 x ResidualCleanBlock(48, pattern 3,5,3)` at `128x128`
+    - `ConvTranspose2d 48->32 stride2 + LeakyReLU` back to `256x256`
+  - tail head: `Conv3x3 32->32 + LeakyReLU`
+  - tail: `Conv3x3 32->3`
+  - output: direct restored image
+- `ResidualCleanBlock` stays fixed:
+  - `Conv2d -> LeakyReLU -> Conv2d -> LeakyReLU`
+  - no internal skip path
+- Training loss:
+  - supervised residual loss stays in residual space:
+    - `pred_res = pred - lr`
+    - `target_res = hr - lr`
+    - `loss_mse = MSE(pred_res, target_res)`
+    - `loss_l1 = L1(pred_res, target_res)`
+  - add teacher distillation:
+    - `teacher_res = teacher_pred - lr`
+    - `loss_distill = MSE(pred_res, teacher_res.detach())`
+  - total loss:
+    - `0.8 * loss_mse + 0.2 * loss_l1 + 0.05 * loss_distill`
+- Teacher resolution:
+  - teacher is training-only and never exported
+  - default teacher path resolution order:
+    1. [best.pth](/Users/mrcyrilgoud/Desktop/repos/Lab3/runs/013420_2904_fsrcnn_residual_96_40_m8_modal_resume5750_to6000_lr300/checkpoints/best.pth)
+    2. [best.pth](/Users/mrcyrilgoud/Desktop/repos/Lab3/runs/021424_2904_fsrcnn_residual_96_40_m8_modal_resume5750_to6000_lr300/checkpoints/best.pth)
+  - teacher weight source default: `ema`
+  - if neither checkpoint exists, disable distillation and record that state
+- Warm start:
+  - default student warm start path:
+    - [best.pth](/Users/mrcyrilgoud/Desktop/repos/Lab3/runs/2026-05-01/lab3_srnet_dwg4_v1_recovery_l3_20260501_1651/checkpoints/best.pth)
+  - use filtered same-name same-shape loading only
+  - record loaded and skipped keys in `summary.json` and `report.json`
+- Training defaults:
+  - `batch_size = 8`
+  - `epochs = 460`
+  - `warmup_epochs = 5`
+  - `lr = 1e-4`
+  - `min_lr = 5e-6`
+  - `weight_decay = 5e-5`
+  - `grad_clip_norm = 0.5`
+  - `use_amp = True`
+  - `early_stop_patience = 35`
+- Keep the current non-finite loss guards, EMA, cosine schedule, Modal-only execution, training-derived calibration, and synced day-partitioned run outputs.
+- Tighten the ONNX audit to the PDF:
+  - allowed ops: `Conv`, `ConvTranspose`, `LeakyRelu`
+  - fail if any of these appear: `Add`, `Concat`, `Resize`, `Mul`, `Sub`, `Relu`, `Sigmoid`, `Softmax`, `Transpose`
+- Keep the current concise runtime logs:
+  - setup summary
+  - data summary
+  - model summary
+  - one epoch line
+  - one final summary
+- Extend `RunConfig` and env support with:
+  - `teacher_checkpoint`
+  - `teacher_weight_source`
+  - `distill_weight`
+  - `allow_missing_teacher`
+  - `strict_mla_pdf_audit`
+- Extend run reports with:
+  - `teacher_distillation.enabled`
+  - `teacher_distillation.path`
+  - `teacher_distillation.source`
+  - `teacher_distillation.resolved_automatically`
+  - `teacher_distillation.rejected_reason`
+  - `warm_start.loaded_key_count`
+  - `warm_start.skipped_key_count`
+  - `onnx_summary.pdf_allowed_ops_only`
+  - `onnx_summary.pdf_unexpected_ops_found`
+
+## Test Plan
+- Static checks:
+  - notebook JSON remains valid
+  - all code cells compile
+  - contract remains `1x3x256x256 -> 1x3x256x256`
+  - local module audit contains only `Conv2d`, `ConvTranspose2d`, `LeakyReLU`
+- Modal run checks:
+  - L3 pair counts remain `2217` train and `110` val
+  - training/export/calibration all run on Modal only
+  - sync-back creates the day-partitioned local run directory
+  - ONNX export contains no `Add`, `Concat`, `Resize`, `Mul`, or `Sub`
+  - `onnx_summary.pdf_allowed_ops_only == true`
+  - ONNX checker and ORT parity pass
+  - calibration manifest remains training-derived
+  - teacher and warm-start outcomes are reported explicitly
+- Acceptance criteria:
+  - strict MLA-safe ONNX audit passes under the PDF whitelist
+  - `best_val_psnr > 24.0179245` to beat the current SRNet best
+  - target `best_val_psnr >= 24.0634101`
+  - if both models later have measured MLA latency, this variant should also beat the current recovery SRNet on latency
+  - if MLA-safe export passes but PSNR regresses below `24.0179245`, classify it as a latency-oriented architectural experiment, not the new primary SRNet
+
+## Assumptions
+- `AGENTS.md` points to `docs/model_notebook_requirements_rubric.md`, but the rubric file present in this repo is [model_notebook_requirements_rubric.md](/Users/mrcyrilgoud/Desktop/repos/Lab3/docs/notes/model_notebook_requirements_rubric.md); use that file as the operative rubric.
+- The MLA PDF’s `Adding` entry is treated as a real latency risk, so the new student must avoid exported `Add`.
+- The FSRCNN teacher may contain unsupported inference ops in its own exported graph, but that is acceptable because the teacher is training-only and not part of the submission model.
+- No local training, no autopilot controller changes, and no canonical registry changes are part of this patch.
